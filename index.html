@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SnipPDF - 图片转 PDF・多档压缩・纯本地处理</title>
+
+<!-- SEO Meta -->
+<meta name="description" content="免费在线图片转PDF工具，支持多档体积压缩、拖拽排序、旋转裁剪、A4排版，纯本地处理保护隐私，适配AI平台上传">
+<meta name="keywords" content="图片转PDF,在线PDF,图片压缩,AI PDF,免费PDF工具,SnipPDF,图片裁剪,多图转PDF">
+<meta name="author" content="SnipPDF">
+<meta name="robots" content="index,follow">
+
+<!-- PWA -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#D1404A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SnipPDF">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23D1404A'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'%3E📄%3C/text%3E%3C/svg%3E">
+
+<!-- Styles - 首屏只加载自定义CSS -->
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ── HEADER (始终显示) ── -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">📄</div>
+      <span class="logo-text">SnipPDF</span>
+    </div>
+    <div class="tagline">图片转 PDF · 多档压缩 · 纯本地处理</div>
+  </header>
+
+  <!-- ═══ LANDING HOMEPAGE (无图片时显示) ═══ -->
+  <main class="main landing-mode" v-if="!hasImg">
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <!-- 大上传区 -->
+      <div class="hero-upload-zone"
+        :class="{'drag-over': dragOver}"
+        @click="openFile"
+        @dragover.prevent="dragOver = true"
+        @dragleave.prevent="dragOver = false"
+        @drop.prevent="onDrop">
+        <div class="hero-upload-inner">
+          <svg class="hero-upload-icon" viewBox="0 0 64 64" fill="none">
+            <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="2" stroke-dasharray="6 4"/>
+            <path d="M32 20v24M20 32l12-12 12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="hero-upload-main">点击上传 或 拖拽图片到此处</span>
+          <span class="hero-upload-hint">支持 JPG / PNG / WebP / BMP / HEIC · 可多选 · 支持粘贴</span>
+        </div>
+      </div>
+      <input type="file" ref="fileInp" class="hidden-input" multiple
+        accept="image/jpeg,image/png,image/webp,image/bmp,image/heic,image/heif"
+        @change="onFiles">
+
+      <!-- 功能特性 -->
+      <div class="features-grid">
+        <div class="feature-item">
+          <span class="feature-icon">⚡</span>
+          <span class="feature-name">快速转换</span>
+          <span class="feature-desc">支持多格式批量导入，拖拽排序，一键生成 PDF</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🗜️</span>
+          <span class="feature-name">裁剪旋转</span>
+          <span class="feature-desc">可视化编辑图片，自由排版，适配多种布局</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">✂️</span>
+          <span class="feature-name">多档压缩</span>
+          <span class="feature-desc">三档压缩可选，适配 AI 平台上传限制</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🔒</span>
+          <span class="feature-name">隐私安全</span>
+          <span class="feature-desc">文件全程本地处理，不上传服务器</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ═══ EDITOR MODE (有图片后显示) ═══ -->
+  <main class="main editor-mode" v-cloak v-else>
+    <!-- ── UPLOAD (紧凑版) ── -->
+    <div class="card">
+      <div class="upload-zone compact-zone"
+        :class="{'drag-over': dragOver}"
+        @click="openFile"
+        @dragover.prevent="dragOver = true"
+        @dragleave.prevent="dragOver = false"
+        @drop.prevent="onDrop">
+        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span class="upload-text">
+          <span @click.stop="openFile">继续添加图片</span>
+          <span class="upload-hint">(支持多选 · JPG/PNG/WebP/BMP/HEIC)</span>
+        </span>
+      </div>
+      <input type="file" ref="fileInpEditor" class="hidden-input" multiple
+        accept="image/jpeg,image/png,image/webp,image/bmp,image/heic,image/heif"
+        @change="onFiles">
+    </div>
+
+    <!-- ── TOOLBAR ── -->
+    <div class="card">
+      <div class="toolbar">
+
+        <!-- Row 1: 方向 / 每页张数 / 页边距 -->
+        <div class="toolbar-row">
+          <span class="toolbar-label">纸张方向：</span>
+          <div class="chip-group">
+            <button class="chip" :class="{active: orientation === 'portrait'}" @click="orientation = 'portrait'" :disabled="exporting">📄 纵向</button>
+            <button class="chip" :class="{active: orientation === 'landscape'}" @click="orientation = 'landscape'" :disabled="exporting">📄 横向</button>
+          </div>
+          <span class="toolbar-label" style="margin-left:4px;">每页张数：</span>
+          <div class="chip-group">
+            <button class="chip" :class="{active: perPage === 1}" @click="perPage = 1" :disabled="exporting">1 张</button>
+            <button class="chip" :class="{active: perPage === 2}" @click="perPage = 2" :disabled="exporting">2 张</button>
+            <button class="chip" :class="{active: perPage === 4}" @click="perPage = 4" :disabled="exporting">4 张</button>
+          </div>
+          <span class="toolbar-label" style="margin-left:4px;">页边距：</span>
+          <div class="chip-group">
+            <button class="chip" :class="{active: pageMargin === 'compact'}" @click="pageMargin = 'compact'" :disabled="exporting" title="适合笔记截图、AI上传，减少空白">紧凑</button>
+            <button class="chip" :class="{active: pageMargin === 'standard'}" @click="pageMargin = 'standard'" :disabled="exporting" title="通用默认，适合大多数场景">标准</button>
+            <button class="chip" :class="{active: pageMargin === 'loose'}" @click="pageMargin = 'loose'" :disabled="exporting" title="适合打印，留白充足">宽松</button>
+          </div>
+        </div>
+
+        <!-- Row 2: 压缩 + 预估体积 -->
+        <div class="toolbar-row compression-row">
+          <span class="toolbar-label">体积压缩：</span>
+          <select class="custom-select" v-model="compression" :disabled="exporting">
+            <option value="20">高压缩（适合AI上传）</option>
+            <option value="50">均衡压缩（推荐）</option>
+            <option value="100">低压缩（保留高清）</option>
+          </select>
+          <span class="size-estimate" v-if="hasImg">
+            <span class="est-icon">📊</span>
+            预估 <span class="est-value">≈ {{ estimatedSizeText }}</span>
+          </span>
+        </div>
+
+        <!-- Row 3: 工具按钮 / 文件名 / 导出 -->
+        <div class="toolbar-row action-row">
+          <button class="btn-tool" @click="reverseAll" :disabled="!hasImg || exporting">🔄 倒序</button>
+          <button class="btn-tool danger" @click="confirmClearAll" :disabled="!hasImg || exporting">🗑️ 清空</button>
+
+          <div class="filename-wrap" style="position:relative;">
+            <input type="text" class="export-filename" :class="{error: fnErr}"
+              v-model="fileName" :disabled="!hasImg || exporting"
+              placeholder="文件名（可选）" @input="chkFn">
+            <div class="filename-err" :class="{show: fnErr}">{{ fnErrMsg }}</div>
+          </div>
+
+          <button class="btn-export" :class="{loading: exporting}" :disabled="!hasImg || exporting" @click="exportPdf">
+            <span class="spinner-mini"></span>
+            <span>{{ exporting ? '正在生成…' : '📥 导出 PDF' }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Export Progress Bar -->
+      <div class="export-progress-wrap" :class="{show: showExportProgress}">
+        <div class="export-progress-bar">
+          <div class="export-progress-fill" :style="{width: exportProgress + '%'}"></div>
+        </div>
+        <div class="export-progress-text">{{ exportProgressText }}</div>
+      </div>
+    </div>
+
+    <!-- ── PREVIEW ── -->
+    <div class="card preview-card">
+      <div class="preview-wrap">
+        <div class="preview-pages" ref="previewRoot" v-if="images.length">
+          <div v-for="(page, pIdx) in pages" :key="'pg-' + pIdx" class="preview-page-card">
+            <div class="preview-page" :style="pageStyle">
+              <div class="page-margin-box" :style="marginBoxStyle"></div>
+              <div :class="'page-images per-' + perPage" :data-page="pIdx" :style="imageGridPadding">
+                <div v-for="img in page" :key="img.id" class="image-card"
+                  :data-id="img.id"
+                  @click.stop="openCrop(img.id)">
+                  <img :src="img.url" draggable="false"
+                    :style="{transform: 'rotate(' + img.rot + 'deg)'}">
+                  <span class="img-badge">{{ img.origIdx + 1 }}</span>
+                  <span class="crop-indicator">✂️</span>
+                  <button class="card-btn btn-del"
+                    @click.stop.prevent="delImg(img.id)"
+                    @mousedown.stop.prevent
+                    title="删除">✕</button>
+                  <button class="card-btn btn-rot-l"
+                    @click.stop.prevent="rotImg(img.id, -90)"
+                    @mousedown.stop.prevent
+                    title="逆时针旋转">↺</button>
+                  <button class="card-btn btn-rot-r"
+                    @click.stop.prevent="rotImg(img.id, 90)"
+                    @mousedown.stop.prevent
+                    title="顺时针旋转">↻</button>
+                </div>
+              </div>
+            </div>
+            <div class="page-number">第{{ pIdx + 1 }}页</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="trash-wrap" ref="trashWrap"
+        :class="{'drag-over': trashOver}"
+        @dragover.prevent="trashOver = true"
+        @dragleave="trashOver = false"
+        @drop.prevent="onTrashDrop">
+        <div class="trash-inner">
+          <svg class="trash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/>
+            <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+          </svg>
+          <span>拖拽图片到此处删除</span>
+        </div>
+        <div class="trash-drop" ref="trashDrop"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer" v-show="!hasImg">
+    所有文件仅在本地处理，不会上传至服务器
+  </footer>
+
+  <!-- Toast Notification -->
+  <div class="toast-container" v-cloak>
+    <transition name="toast">
+      <div v-for="t in toasts" :key="t.id" :class="'toast toast-' + t.type">
+        {{ t.message }}
+      </div>
+    </transition>
+  </div>
+
+  <!-- Undo -->
+  <div class="undo-bar" :class="{show: showUndo}">
+    <span>{{ undoMsg }}</span><span class="undo-link" @click="doUndo">撤销</span>
+  </div>
+
+  <!-- ── Crop Dialog ── -->
+  <div class="crop-overlay" v-cloak v-if="cropVisible" @click.self="closeCrop">
+    <div class="crop-dialog">
+      <div class="crop-header">
+        <span class="crop-header-title">✂️ 编辑图片</span>
+        <button class="crop-close-btn" @click="closeCrop" title="关闭">✕</button>
+      </div>
+
+      <div class="crop-toolbar">
+        <span class="crop-ratio-label">比例：</span>
+        <button class="crop-ratio-chip" :class="{active: cropActiveRatio === 'free'}"
+          @click="setCropRatio('free', NaN)">自由</button>
+        <button class="crop-ratio-chip" :class="{active: cropActiveRatio === 'a4'}"
+          @click="setCropRatio('a4', 1 / 1.414)">A4</button>
+        <button class="crop-ratio-chip" :class="{active: cropActiveRatio === '1:1'}"
+          @click="setCropRatio('1:1', 1)">1:1</button>
+        <button class="crop-ratio-chip" :class="{active: cropActiveRatio === '4:3'}"
+          @click="setCropRatio('4:3', 4 / 3)">4:3</button>
+        <button class="crop-ratio-chip" :class="{active: cropActiveRatio === '16:9'}"
+          @click="setCropRatio('16:9', 16 / 9)">16:9</button>
+        <button class="crop-ratio-chip" @click="resetCrop" style="margin-left:auto;">↺ 重置</button>
+      </div>
+
+      <div class="crop-area">
+        <img id="crop-target-img" :src="cropSrc" alt="编辑图片">
+      </div>
+
+      <div class="crop-actions">
+        <div class="crop-actions-left">
+          <button class="btn-crop-act" @click="rotateCrop(-90)" title="逆时针旋转90°">↺ 旋转-90°</button>
+          <button class="btn-crop-act" @click="rotateCrop(90)" title="顺时针旋转90°">↻ 旋转+90°</button>
+          <span class="crop-zoom-label">
+            🔍 <input type="range" class="crop-zoom-slider" min="1" max="100" value="50" @input="onCropZoom" title="缩放">
+          </span>
+        </div>
+        <div class="crop-actions-right">
+          <button class="btn-crop-cancel" @click="closeCrop">取消</button>
+          <button class="btn-crop-save" @click="saveCrop">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PWA Install Banner ── -->
+  <div class="pwa-install-banner" :class="{show: pwaInstallVisible}">
+    <span class="pwa-install-icon">📱</span>
+    <span class="pwa-install-text">添加到桌面，<b>离线也能用</b></span>
+    <button class="pwa-install-btn" @click="installPwa">安装</button>
+    <button class="pwa-install-close" @click="dismissPwaInstall">✕</button>
+  </div>
+</div>
+
+<!-- Vue 3 (唯一首屏必须的框架) -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+<!-- Application (不含外部依赖) -->
+<script src="./js/utils.js"></script>
+<script src="./js/app.js"></script>
+
+<script>
+// Mount Vue app (不再需要 TDesign)
+app.mount('#app');
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(function() {});
+}
+</script>
+
+<!-- 不蒜子统计 (异步不阻塞) -->
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
