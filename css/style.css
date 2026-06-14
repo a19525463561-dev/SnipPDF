@@ -179,12 +179,14 @@ html{overflow-x:hidden;}
 .card-btn{
   position:absolute;display:flex;align-items:center;justify-content:center;
   border:none;cursor:pointer;border-radius:3px;transition:all .2s;z-index:5;pointer-events:auto;
+  -webkit-appearance:none;appearance:none;
+  background:rgba(255,255,255,0.85);
 }
-.btn-del{top:3px;right:3px;width:18px;height:18px;background:rgba(255,255,255,0.85);color:#B0B0B0;font-size:11px;line-height:1;}
+.btn-del{top:3px;right:3px;width:18px;height:18px;color:#B0B0B0;font-size:11px;line-height:1;}
 .btn-del:hover{background:#E34D59;color:#FFF;transform:scale(1.2);}
-.btn-rot-l{bottom:3px;left:3px;width:20px;height:20px;background:rgba(255,255,255,0.8);color:#999;font-size:10px;line-height:1;}
+.btn-rot-l{bottom:3px;left:3px;width:20px;height:20px;color:#999;font-size:10px;line-height:1;}
 .btn-rot-l:hover{color:var(--primary);}
-.btn-rot-r{bottom:3px;left:26px;width:20px;height:20px;background:rgba(255,255,255,0.8);color:#999;font-size:10px;line-height:1;}
+.btn-rot-r{bottom:3px;left:26px;width:20px;height:20px;color:#999;font-size:10px;line-height:1;}
 .btn-rot-r:hover{color:var(--primary);}
 
 /* Sortable */
@@ -420,6 +422,12 @@ body.exporting .t-select{cursor:not-allowed!important;pointer-events:none!import
   .feature-item{padding:18px 12px;}
   .toolbar-row{flex-wrap:wrap;}
   .crop-dialog{width:92vw;}
+  /* 平板端增大按钮触控区域（最小44px） */
+  .btn-del{width:28px;height:28px;font-size:14px;top:4px;right:4px;}
+  .btn-rot-l{width:28px;height:28px;font-size:13px;bottom:4px;left:4px;}
+  .btn-rot-r{width:28px;height:28px;font-size:13px;bottom:4px;left:34px;}
+  /* 平板端禁用长按弹出菜单，防止干扰 */
+  .image-card{-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}
 }
 
 /* ── 响应式: 移动端 (≤767px) ── */
@@ -438,23 +446,87 @@ body.exporting .t-select{cursor:not-allowed!important;pointer-events:none!import
   .hero-upload-hint{font-size:12px;}
   .features-grid{grid-template-columns:1fr;max-width:none;margin:0 auto;gap:12px;}
   .feature-item{padding:18px 14px;}
-  .toolbar-row{flex-wrap:wrap;}
-  .toolbar-label{font-size:12px;}
-  .compression-row{flex-wrap:wrap;gap:6px;}
+
+  /* ── 工具栏：按逻辑分组分行（核心修复）── */
+  .toolbar{padding:12px;gap:10px;}
+  .toolbar-row{
+    display:flex;flex-wrap:wrap;align-items:center;
+    gap:6px;padding-bottom:8px;border-bottom:1px solid #F0F0F0;
+  }
+  .toolbar-row:last-of-type{border-bottom:none;padding-bottom:0;}
+  .toolbar-row.compression-row{
+    flex-wrap:wrap;gap:6px;
+    padding-bottom:8px;border-bottom:1px solid #F0F0F0;
+  }
+  .toolbar-row.action-row{
+    flex-direction:column;align-items:stretch;gap:8px;
+    padding-bottom:0;border-bottom:none;
+  }
+  /* 标签独占一行 + 控件换行 */
+  .toolbar-label{font-size:12px;width:100%;margin-bottom:2px;}
+  /* chip 按钮缩小以适配窄屏 */
+  .chip{padding:4px 10px;font-size:12px;height:30px;}
+  /* 压缩行：标签 + select 各占一行 */
+  .compression-row .custom-select{width:100%;flex:none;min-width:0;}
+  .compression-row .size-estimate{margin-left:0;width:100%;justify-content:center;padding-top:4px;}
+  /* 操作行：按钮横排，文件名+导出满宽 */
+  .action-row .btn-tool{flex:1;justify-content:center;min-width:0;}
+  .action-row .filename-wrap{width:100%;min-width:0;flex:auto;}
+  .action-row .export-filename{width:100%;}
+  .action-row .btn-export{margin-left:0;width:100%;height:40px;font-size:15px;}
+
   .custom-select{min-width:140px;flex:1;}
   .btn-export{margin-left:0;width:100%;justify-content:center;}
   .filename-wrap{min-width:auto;flex:auto;}
   .export-filename{width:100%;}
-  .preview-page-card{padding:8px;border-radius:6px;}
-  .preview-wrap{padding:0 8px 8px;}
+  .preview-card{overflow:visible!important;}
+  .preview-page-card{padding:8px;border-radius:6px;overflow:visible!important;}
+  .preview-wrap{padding:0 4px 8px;}
+
+  /* ── 核心修复：预览页面自适应手机宽度 ──
+   * JS 给 .preview-page 设置了固定的 width/height（如 520×736px），
+   * 在手机端远超视口尺寸，导致内容被裁切无法滚动查看。
+   * 此处用 !important 覆盖内联样式，改为百分比+自适应高度。
+   */
+  .preview-page{
+    width:100%!important;max-width:520px!important;
+    height:auto!important;
+    min-height:260px;
+    overflow:visible!important;
+  }
+  /* page-images 用 min-height 撑开，让图片内容决定实际高度 */
+  .page-images{
+    width:100%!important;height:auto!important;min-height:240px;
+    position:relative!important;
+  }
   .page-number{font-size:10px;margin-top:6px;}
   .crop-dialog{width:96vw;max-height:96vh;border-radius:8px;}
   .crop-header{padding:12px 14px;}
   .crop-toolbar{gap:4px;padding:8px 10px;}
   .crop-actions{flex-direction:column;gap:8px;}
   .crop-actions-left{flex-wrap:wrap;}
-  .pwa-install-banner{flex-direction:column;text-align:center;padding:12px 16px;}
+
+  /* ── PWA 安装条：移动端改为底部内联，不遮挡内容 ── */
+  .pwa-install-banner{
+    position:relative;bottom:auto;left:auto;
+    transform:none;max-width:100%;
+    margin:0 8px 12px;border-radius:8px;
+    box-shadow:var(--shadow);z-index:auto;
+    justify-content:center;
+  }
+  .pwa-install-banner.show{transform:none;}
+  .pwa-install-close{
+    width:28px;height:28px;font-size:16px;background:#F5F5F5;
+    border-radius:50%;position:absolute;top:6px;right:6px;
+  }
+  .pwa-install-close:hover{background:#E8E8E8;}
+
   .upload-zone{padding:20px 16px;}
+  /* 手机端增大按钮触控区域 */
+  .btn-del{width:28px;height:28px;font-size:14px;top:4px;right:4px;}
+  .btn-rot-l{width:28px;height:28px;font-size:13px;bottom:4px;left:4px;}
+  .btn-rot-r{width:28px;height:28px;font-size:13px;bottom:4px;left:34px;}
+  .image-card{-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}
 }
 
 /* ═══════════════ LANDING HOMEPAGE ═══════════════ */
@@ -534,6 +606,20 @@ body:has(.landing-mode) .header{
 .feature-icon{font-size:28px;line-height:1;}
 .feature-name{font-size:14px;font-weight:600;color:var(--text);}
 .feature-desc{font-size:11.5px;color:var(--text-muted);line-height:1.45;}
+
+/* ── 移动端覆盖 (必须放在 Landing Homepage 之后) ──
+ * 上方的 @media(max-width:767px) 被本段 Landing 样式覆盖，
+ * 此处重新声明确保移动端生效。
+ */
+@media(max-width:767px){
+  .landing-mode > *{zoom:1.08;}
+  body:has(.landing-mode) .header{zoom:1.08;}
+  .hero-section{padding:16px 8px 28px;}
+  .features-grid{grid-template-columns:1fr !important;gap:12px;}
+  .feature-item{padding:16px 14px;text-align:center;}
+  .feature-name{font-size:15px;}
+  .feature-desc{font-size:13px;line-height:1.5;}
+}
 
 /* ═══════════════ CUSTOM SELECT (替代 TDesign) ═══════════════ */
 .custom-select{

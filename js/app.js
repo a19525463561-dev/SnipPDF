@@ -416,6 +416,28 @@ const app = createApp({
       }
     }
 
+    // ── 平板端触控修复：区分按钮点击与卡片点击 ──
+    // 平板触控环境下，.card-btn 的 z-index 层会拦截触摸事件，
+    // 导致 openCrop 无法通过 click 触发。此方法通过 touchend 兜底处理。
+    var _cardTouchMoved = false;
+    var _cardTouchTimer = null;
+
+    function onCardTouchEnd(e, imgId) {
+      // 如果触点在操作按钮上，交给按钮自己的 click 处理
+      if (e.target.closest('.card-btn')) return;
+      // 如果发生了拖拽（Sortable），不触发裁剪
+      if (_cardTouchMoved) {
+        _cardTouchMoved = false;
+        return;
+      }
+      // 短暂延迟，避免与 click 事件冲突（click 可能在 touchend 之后也触发）
+      if (_cardTouchTimer) clearTimeout(_cardTouchTimer);
+      _cardTouchTimer = setTimeout(function() {
+        _cardTouchTimer = null;
+        openCrop(imgId);
+      }, 50);
+    }
+
     // ── Crop Dialog ──
     function openCrop(imgId) {
       if (exporting.value) return;
@@ -705,6 +727,15 @@ const app = createApp({
         pwaDeferredPrompt = e;
         pwaInstallVisible.value = true;
       });
+
+      // 平板端触控拖拽检测：防止拖拽时误触 openCrop
+      document.addEventListener('touchmove', function() {
+        _cardTouchMoved = true;
+      }, { passive: true });
+      document.addEventListener('touchend', function() {
+        // 延迟重置，让 image-card 的 touchend 先判断
+        setTimeout(function() { _cardTouchMoved = false; }, 100);
+      });
     });
 
     onBeforeUnmount(function() {
@@ -745,6 +776,7 @@ const app = createApp({
       onTrashDrop: onTrashDrop, doUndo: doUndo, chkFn: chkFn,
       exportPdf: exportPdf,
       openCrop: openCrop, closeCrop: closeCrop,
+      onCardTouchEnd: onCardTouchEnd,
       setCropRatio: setCropRatio, rotateCrop: rotateCrop,
       resetCrop: resetCrop, saveCrop: saveCrop, onCropZoom: onCropZoom,
       installPwa: installPwa, dismissPwaInstall: dismissPwaInstall

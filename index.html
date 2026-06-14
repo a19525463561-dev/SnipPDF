@@ -186,7 +186,8 @@
               <div :class="'page-images per-' + perPage" :data-page="pIdx" :style="imageGridPadding">
                 <div v-for="img in page" :key="img.id" class="image-card"
                   :data-id="img.id"
-                  @click.stop="openCrop(img.id)">
+                  @click.stop="openCrop(img.id)"
+                  @touchend.stop="onCardTouchEnd($event, img.id)">
                   <img :src="img.url" draggable="false"
                     :style="{transform: 'rotate(' + img.rot + 'deg)'}">
                   <span class="img-badge">{{ img.origIdx + 1 }}</span>
